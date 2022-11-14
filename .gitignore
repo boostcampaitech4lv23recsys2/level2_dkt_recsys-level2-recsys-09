@@ -110,6 +110,7 @@ ENV/
 .empty/
 
 # input data, saved log, checkpoints
+data/
 output/
 asset/
 models/

@@ -117,7 +117,7 @@ models/
 wandb/
 output/
 weight/
-.log
+*.log
 
 # editor, os cache directory
 .vscode/

@@ -14,17 +14,19 @@ device = torch.device("cuda" if use_cuda else "cpu")
 if not os.path.exists(CFG.output_dir):
     os.makedirs(CFG.output_dir)
 
-
+# 예측을 위한 메인
 def main():
     logger.info("Task Started")
 
     logger.info("[1/4] Data Preparing - Start")
+    # 데이터 불러오기
     train_data, test_data, n_node = prepare_dataset(
         device, CFG.basepath, verbose=CFG.loader_verbose, logger=logger.getChild("data")
     )
     logger.info("[1/4] Data Preparing - Done")
 
     logger.info("[2/4] Model Building - Start")
+    # 모델 빌드
     model = build(
         n_node,
         embedding_dim=CFG.embedding_dim,
@@ -38,10 +40,12 @@ def main():
     logger.info("[2/4] Model Building - Done")
 
     logger.info("[3/4] Inference - Start")
+    # 예측
     pred = inference(model, test_data, logger=logger.getChild("infer"))
     logger.info("[3/4] Inference - Done")
 
     logger.info("[4/4] Result Dump - Start")
+    # 저장
     pred = pred.detach().cpu().numpy()
     pd.DataFrame({"prediction": pred}).to_csv(
         os.path.join(CFG.output_dir, CFG.pred_file), index_label="id"

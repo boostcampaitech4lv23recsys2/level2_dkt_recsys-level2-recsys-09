@@ -16,17 +16,19 @@ use_cuda = torch.cuda.is_available() and CFG.use_cuda_if_available
 device = torch.device("cuda" if use_cuda else "cpu")
 print(device)
 
-
+# 메인 
 def main():
     logger.info("Task Started")
 
     logger.info("[1/1] Data Preparing - Start")
+    # 데이터가져오기
     train_data, test_data, n_node = prepare_dataset(
         device, CFG.basepath, verbose=CFG.loader_verbose, logger=logger.getChild("data")
     )
     logger.info("[1/1] Data Preparing - Done")
 
     logger.info("[2/2] Model Building - Start")
+    # 모델 지정
     model = build(
         n_node,
         embedding_dim=CFG.embedding_dim,
@@ -43,6 +45,7 @@ def main():
     logger.info("[2/2] Model Building - Done")
 
     logger.info("[3/3] Model Training - Start")
+    # 학습
     train(
         model,
         train_data,

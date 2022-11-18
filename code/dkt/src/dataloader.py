@@ -11,6 +11,7 @@ from sklearn.preprocessing import LabelEncoder
 
 
 class Preprocess:
+    ### 기본 데이터 설정
     def __init__(self, args):
         self.args = args
         self.train_data = None
@@ -22,6 +23,7 @@ class Preprocess:
     def get_test_data(self):
         return self.test_data
 
+    ### 데이터 스플릿 ~ 이때 유저별로는 안하는 듯?
     def split_data(self, data, ratio=0.7, shuffle=True, seed=0):
         """
         split data into two parts with a given ratio.
@@ -35,7 +37,8 @@ class Preprocess:
         data_2 = data[size:]
 
         return data_1, data_2
-
+    
+    ## 라벨링
     def __save_labels(self, encoder, name):
         le_path = os.path.join(self.args.asset_dir, name + "_classes.npy")
         np.save(le_path, encoder.classes_)
@@ -76,19 +79,19 @@ class Preprocess:
         df["Timestamp"] = df["Timestamp"].apply(convert_time)
 
         return df
-
+    ### 피쳐 엔지니어링 부분 디폴트는 nan
     def __feature_engineering(self, df):
         # TODO
         return df
 
+    ### 상기의 프로세스 과정을, 데이터를 블러와서 진행
     def load_data_from_file(self, file_name, is_train=True):
         csv_file_path = os.path.join(self.args.data_dir, file_name)
         df = pd.read_csv(csv_file_path)  # , nrows=100000)
         df = self.__feature_engineering(df)
         df = self.__preprocessing(df, is_train)
 
-        # 추후 feature를 embedding할 시에 embedding_layer의 input 크기를 결정할때 사용
-
+        ### 추후 feature를 embedding할 시에 embedding_layer의 input 크기를 결정할때 사용하는 길이 저장
         self.args.n_questions = len(
             np.load(os.path.join(self.args.asset_dir, "assessmentItemID_classes.npy"))
         )
@@ -116,13 +119,14 @@ class Preprocess:
 
         return group.values
 
+    ### 최종적으로 데이터 불러와서 만들기 코드
     def load_train_data(self, file_name):
         self.train_data = self.load_data_from_file(file_name)
 
     def load_test_data(self, file_name):
         self.test_data = self.load_data_from_file(file_name, is_train=False)
 
-
+### 패딩을 위한 전처리
 class DKTDataset(torch.utils.data.Dataset):
     def __init__(self, data, args):
         self.data = data
@@ -163,6 +167,7 @@ class DKTDataset(torch.utils.data.Dataset):
 from torch.nn.utils.rnn import pad_sequence
 
 
+### 각 컬럼끼리 concat하는 과정
 def collate(batch):
     col_n = len(batch[0])
     col_list = [[] for _ in range(col_n)]
@@ -180,7 +185,7 @@ def collate(batch):
 
     return tuple(col_list)
 
-
+### dataloader로 ~~
 def get_loaders(args, train, valid):
 
     pin_memory = False

@@ -7,7 +7,7 @@ class CFG:
     wandb_kwargs = dict(project="dkt-gcn")
 
     # data
-    basepath = "/opt/ml/input/data/"
+    basepath = "/opt/ml/input/DKT/data/"
     loader_verbose = True
 
     # dump
@@ -23,7 +23,7 @@ class CFG:
 
     # train
     n_epoch = 20
-    learning_rate = 0.001
+    learning_rate = 0.1
     weight_basepath = "./weight"
 
 

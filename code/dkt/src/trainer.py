@@ -39,7 +39,6 @@ def run(args, train_data, valid_data, model):
         auc, acc = validate(valid_loader, model, args)
 
         ### TODO: model save or early stopping
-        '''
         wandb.log(
             {
                 "epoch": epoch,
@@ -50,7 +49,6 @@ def run(args, train_data, valid_data, model):
                 "valid_acc_epoch": acc,
             }
         )
-        '''
         if auc > best_auc:
             best_auc = auc
             # torch.nn.DataParallel로 감싸진 경우 원래의 model을 가져옵니다.
@@ -84,7 +82,7 @@ def train(train_loader, model, optimizer, scheduler, args):
     total_targets = []
     losses = []
     for step, batch in enumerate(train_loader):
-        input = list(map(lambda t: t.to(args.device), process_batch(batch)))
+        input = list(map(lambda t: t.to('cuda'), process_batch(batch)))
         preds = model(input)
         targets = input[3]  # correct
 
@@ -185,6 +183,7 @@ def get_model(args):
 def process_batch(batch):
 
     test, question, tag, correct, mask = batch
+    
 
     # change to float
     mask = mask.float()

@@ -28,6 +28,7 @@ def run(args, train_data, valid_data, model):
 
     best_auc = -1
     early_stopping_counter = 0
+    print(f"Train Data: {len(train_loader.dataset)}, Valid Data: {len(valid_loader.dataset)}")
     for epoch in range(args.n_epochs):
 
         print(f"Start Training: Epoch {epoch + 1}")
@@ -88,7 +89,20 @@ def train(train_loader, model, optimizer, scheduler, args):
         preds = model(input)
         targets = input[3]  # correct
 
-        loss = compute_loss(preds, targets)
+        """
+        slen = []   # 각 시퀀스 길이
+        for i in range(len(input[0])):
+            tmp = True
+            for j in range(len(input[0][i])):
+                if input[4][i][j] == 0: # mask 활용해서 마지막 유닛 인덱스 찾기
+                    slen.append(j)
+                    tmp = False
+                    break
+            if tmp: # mask에 0이 없는 경우 => 마지막 index
+                slen.append((len(input[0][i])-1))
+        """
+
+        loss = compute_loss(preds, targets) # , slen
         update_params(loss, model, optimizer, scheduler, args)
 
         if step % args.log_steps == 0:
@@ -193,8 +207,8 @@ def process_batch(batch):
 
     # interaction을 임시적으로 correct를 한칸 우측으로 이동한 것으로 사용
     interaction = correct + 1  # 패딩을 위해 correct값에 1을 더해준다.
-    interaction = interaction.roll(shifts=1, dims=1)
-    interaction_mask = mask.roll(shifts=1, dims=1)
+    interaction = interaction.roll(shifts=1, dims=1)   # 수정
+    interaction_mask = mask.roll(shifts=1, dims=1) # 필요한가?
     interaction_mask[:, 0] = 0
     interaction = (interaction * interaction_mask).to(torch.int64)
 
@@ -207,7 +221,7 @@ def process_batch(batch):
 
 
 # loss계산하고 parameter update!
-def compute_loss(preds, targets):
+def compute_loss(preds, targets): # , slen
     """
     Args :
         preds   : (batch_size, max_seq_len)
@@ -216,8 +230,15 @@ def compute_loss(preds, targets):
     """
     loss = get_criterion(preds, targets)
 
-    # 마지막 시퀀드에 대한 값만 loss 계산
-    loss = loss[:, -1]
+    """right padding으로 바꾸면서 마지막 유닛을 구하는 알고리즘이 필요함
+    loss = []
+    for i in range(len(_loss)):
+        loss.append(_loss[i][slen[i]])
+    loss = torch.stack(loss, 0)
+    """
+    
+    # 각 시퀀스별 마지막 유닛에 대한 값만 loss 계산
+    loss = loss[:, -1] 
     loss = torch.mean(loss)
     return loss
 

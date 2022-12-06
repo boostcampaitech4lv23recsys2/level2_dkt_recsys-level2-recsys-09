@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-
+from torch_geometric.nn.models import LightGCN
 try:
     from transformers.modeling_bert import BertConfig, BertEncoder, BertModel
 except:
@@ -166,7 +166,24 @@ class Bert(nn.Module):
         self.embedding_question = nn.Embedding(
             self.args.n_questions + 1, self.hidden_dim // 3
         )
-
+        # get embedding from LightGCN
+        print("[Loading] pretrained embedding...")
+        n_node = 7442+9454
+        emb_dim = 64
+        num_layers=6
+        lightgcn_dir = "/opt/ml/input/code/lightgcn/weight/best_model.pt"
+        lightgcn = LightGCN(n_node, embedding_dim=emb_dim, num_layers=num_layers)
+        state = torch.load(lightgcn_dir)["model"]
+        lightgcn.load_state_dict(state)
+        # self.embedding_question = nn.Embedding(
+        #     self.args.n_questions+1, self.hidden_dim // n_features
+        # )
+        # print(self.embedding_question.weight.shape)
+        lightgcn_embedding = lightgcn.embedding.weight[7442:].detach().clone()
+        lightgcn_embedding = torch.cat((lightgcn_embedding,torch.rand((2,64)),))
+        self.embedding_question = nn.Embedding.from_pretrained(lightgcn_embedding, freeze=False)
+        print(self.embedding_question.weight.shape)
+        print("[Done] Loaded lightgcn embedding")
         self.embedding_tag = nn.Embedding(self.args.n_tag + 1, self.hidden_dim // 3)
 
         # embedding combination projection

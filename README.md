@@ -29,7 +29,7 @@ DKT는 Deep Knowledge Tracing의 약자로 우리의 "지식 상태"를 추적�
 - `KnowledgeTag` 문항 당 하나씩 배정되는 태그로, 일종의 중분류 역할. 912개의 고유 태그가 존재.
 
 ## 💻 Repository Summary
-![Repo drawio (1)](https://user-images.githubusercontent.com/75313644/206394554-f4b119e7-cd49-430e-8dde-3fbba5886b3a.png)
+![Repo-페이지-1 drawio](https://user-images.githubusercontent.com/75313644/206433453-d315cddd-5cdd-477b-958b-b086369f7042.png)
 
 ## 🗃 Project Process
 ![Repo drawio (1)](https://user-images.githubusercontent.com/75313644/206394554-f4b119e7-cd49-430e-8dde-3fbba5886b3a.png)

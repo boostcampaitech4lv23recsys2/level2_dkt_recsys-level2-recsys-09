@@ -33,3 +33,6 @@ DKT는 Deep Knowledge Tracing의 약자로 우리의 "지식 상태"를 추적�
 
 ## 🗃 Project Process
 ![Repo drawio (1)](https://user-images.githubusercontent.com/75313644/206394554-f4b119e7-cd49-430e-8dde-3fbba5886b3a.png)
+## Result
+개별모델 성능 및 앙상블 사용여부
+추가 

@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pandas as pd
 import torch
 
@@ -7,15 +8,18 @@ import torch
 def prepare_dataset(device, basepath, verbose=True, logger=None):
     data = load_data(basepath)
     train_data, test_data = separate_data(data)
+    train_data, valid_data = split_train_valid(train_data)
     id2index = indexing_data(data)
     train_data_proc = process_data(train_data, id2index, device)
+    valid_data_proc = process_data(valid_data, id2index, device)
     test_data_proc = process_data(test_data, id2index, device)
 
     if verbose:
         print_data_stat(train_data, "Train", logger=logger)
+        print_data_stat(valid_data, "Valid", logger=logger)
         print_data_stat(test_data, "Test", logger=logger)
 
-    return train_data_proc, test_data_proc, len(id2index)
+    return train_data_proc, valid_data_proc, test_data_proc, len(id2index)
 
 
 def load_data(basepath):
@@ -32,7 +36,7 @@ def load_data(basepath):
     return data
 
 
-def separate_data(data):
+def separate_data(data: pd.DataFrame):
     train_data = data[data.answerCode >= 0]
     test_data = data[data.answerCode < 0]
 
@@ -75,3 +79,9 @@ def print_data_stat(data, name, logger):
     logger.info(f" * Max. UserID   : {max(userid)}")
     logger.info(f" * Num. Items    : {n_item}")
     logger.info(f" * Num. Records  : {len(data)}")
+
+def split_train_valid(train_data: pd.DataFrame):
+    train_data = train_data.sort_values(by=['userID','Timestamp'])
+    valid_data = train_data[train_data['userID'] != np.roll(train_data['userID'],-1)] # -1 마지막 상호작용, 1 = 첫번째 상호작용
+    train_data = train_data[train_data['userID'] == np.roll(train_data['userID'],-1)]
+    return train_data, valid_data

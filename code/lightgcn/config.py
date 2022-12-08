@@ -4,7 +4,7 @@
 class CFG:
     use_cuda_if_available = True
     user_wandb = True
-    wandb_kwargs = dict(project="dkt-gcn")
+    wandb_kwargs = dict(project="DKT-ISCREAM")
 
     # data
     basepath = "/opt/ml/input/data/"
@@ -16,14 +16,14 @@ class CFG:
 
     # build
     embedding_dim = 64  # int
-    num_layers = 1  # int
+    num_layers = 6  # int
     alpha = None  # Optional[Union[float, Tensor]]
     build_kwargs = {}  # other arguments
     weight = "./weight/best_model.pt"
 
     # train
-    n_epoch = 20
-    learning_rate = 0.001
+    n_epoch = 10000
+    learning_rate = 0.0005
     weight_basepath = "./weight"
 
 

@@ -32,8 +32,13 @@ DKT는 Deep Knowledge Tracing의 약자로 우리의 "지식 상태"를 추적�
 ![Repo-페이지-1 drawio](https://user-images.githubusercontent.com/75313644/206433453-d315cddd-5cdd-477b-958b-b086369f7042.png)
 
 ## 🗃 Project Process
-문제해결을 위한 모델 탐색이후, 계열별로 Public의 점수가 가장 좋은 경우를 확인해 앙상블 진행.
+### 🤖 Models
+문제해결을 위한 모델 탐색이후, 개별 Data Processing이나 Wandb를 통한 Hyer parameter Tuning을 통해서 모델 고도화.
+![image](https://user-images.githubusercontent.com/75313644/206642070-d38a37c3-40c9-442b-8603-d7e8d181d7ef.png)
+### 📈 Ensemble
+계열별로 Public기준의 최적모델을 확인, Prediction의 분포를 시각화해 확인 후, Weight 실험 후 앙상블 진행.
+![image](https://user-images.githubusercontent.com/75313644/206643037-bee27388-6dde-474e-a7bb-958128b54724.png)
 
-## Result
+## 🏅 Result : Public 5th > Privite 3rd
 개별모델 성능 및 앙상블 사용여부
 추가 

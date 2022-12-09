@@ -32,7 +32,7 @@ DKT는 Deep Knowledge Tracing의 약자로 우리의 "지식 상태"를 추적�
 ![Repo-페이지-1 drawio](https://user-images.githubusercontent.com/75313644/206433453-d315cddd-5cdd-477b-958b-b086369f7042.png)
 
 ## 🗃 Project Process
-문제해결을 위한 모델 탐색이후, Public의 점수가 가장 좋은 경우를 확인해 앙상블 진행.
+문제해결을 위한 모델 탐색이후, 계열별로 Public의 점수가 가장 좋은 경우를 확인해 앙상블 진행.
 
 ## Result
 개별모델 성능 및 앙상블 사용여부

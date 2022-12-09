@@ -15,7 +15,6 @@ class Preprocess:
         self.args = args
         self.train_data = None
         self.test_data = None
-        #self.ui = None  # userid index list
 
     def get_train_data(self):
         return self.train_data
@@ -30,24 +29,14 @@ class Preprocess:
         userid-testid 시퀀스를 유저별로 스플릿하려면, userid와 관련된 정보 필요
         """
         """
+        # 모델 고도화를 위해 랜덤 셔플 방식 활용
         if shuffle:
             random.seed(seed)  # fix to default seed 42
             random.shuffle(data)
 
         size = int(len(data) * ratio)
-        data_1 = [:size]
-        data_2 = [size:]
-        """
-        """
-        # 각 유저별 마지막 시퀀스만 valid로 사용 -> 너무 양이 작지는 않나?
-        data_1 = []
-        data_2 = []
-        k = 1   #각 유저별 마지막 시퀀스 몇개를 valid로 사용할 것인가
-        for i in range(len(data)):
-            if set(range(i+1, i+1+k)) & set(self.ui):    # valid set 개수 조절
-                data_2.append(data[i])
-            else:
-                data_1.append(data[i])
+        data_1 = data[:size]
+        data_2 = data[size:]
         """
         # 학습 데이터는 전부 학습에 활용
         data_1 = data
@@ -58,6 +47,8 @@ class Preprocess:
             if -1 not in tmp[i][3]:
                 data_2.append(tmp[i])
 
+        print(f"Train Data: {len(data_1)}, Valid Data: {len(data_2)}")
+
         return data_1, data_2
 
     def __save_labels(self, encoder, name):
@@ -65,7 +56,7 @@ class Preprocess:
         np.save(le_path, encoder.classes_)
 
     def __preprocessing(self, df, is_train=True):
-        cate_cols = ["assessmentItemID", "testId", "KnowledgeTag"]
+        cate_cols = ["assessmentItemID", "testId", "KnowledgeTag"]    # "month", "day", "hour", "minute", "second"
 
         if not os.path.exists(self.args.asset_dir):
             os.makedirs(self.args.asset_dir)
@@ -103,6 +94,12 @@ class Preprocess:
 
     def __feature_engineering(self, df):
         # TODO
+        df['month'] = df["Timestamp"].str.replace('[^0-9]','', regex=True).map(lambda x: int(x[4:6]))
+        df['day'] = df["Timestamp"].str.replace('[^0-9]','', regex=True).map(lambda x: int(x[6:8]))
+        df['hour'] = df["Timestamp"].str.replace('[^0-9]','', regex=True).map(lambda x: int(x[8:10]))
+        df['minute'] = df["Timestamp"].str.replace('[^0-9]','', regex=True).map(lambda x: int(x[10:12]))
+        df['second'] = df["Timestamp"].str.replace('[^0-9]','', regex=True).map(lambda x: int(x[12:14]))
+
         return df
 
     def load_data_from_file(self, file_name, is_train=True):
@@ -142,17 +139,16 @@ class Preprocess:
 
     def load_data_from_file_by_testid(self, file_name, is_train=True):
         csv_file_path = os.path.join(self.args.data_dir, file_name)
-        df = pd.read_csv(csv_file_path)  # , nrows=100000)
+        df = pd.read_csv(csv_file_path)
         """
         if is_train:    # 테스트 데이터를 학습에 활용
             test_df = pd.read_csv(os.path.join(self.args.data_dir, "test_data.csv"))
-            df = pd.concat([df, test_df])
+            df = pd.concat([df, test_df], ignore_index=True)
         """
         df = self.__feature_engineering(df)
         df = self.__preprocessing(df, is_train)
 
         # 추후 feature를 embedding할 시에 embedding_layer의 input 크기를 결정할때 사용
-
         self.args.n_questions = len(
             np.load(os.path.join(self.args.asset_dir, "assessmentItemID_classes.npy"))
         )
@@ -163,8 +159,18 @@ class Preprocess:
             np.load(os.path.join(self.args.asset_dir, "KnowledgeTag_classes.npy"))
         )
 
+        self.args.n_user = 7442 # user  (0~7441)
+
+        self.args.n_month = 12  # month (1~12)
+        self.args.n_day = 31    # day   (1~31)
+        self.args.n_hour = 24   # hour  (0~23)
+        self.args.n_minute = 60 # minute    (0~59)
+        self.args.n_second = 60 # second    (0~59)
+
         df = df.sort_values(by=["userID", "testId", "Timestamp"], axis=0)
-        columns = ["userID", "assessmentItemID", "testId", "answerCode", "KnowledgeTag"]
+        #df["scaled_timestamp"] = (df["Timestamp"] - 1577804881) / (1609260381 - 1577804881) * 500  # max=1609260381, min=1577804881 / numerical
+        columns = ["testId", "assessmentItemID", "KnowledgeTag", "answerCode", "userID", "month", "day", "hour", "minute", "second"]    # "scaled_timestamp"
+        print(len(df), '=>', end=' ')
         group = (
             df[columns]
             .groupby(["userID", "testId"])
@@ -174,17 +180,19 @@ class Preprocess:
                     r["assessmentItemID"].values,
                     r["KnowledgeTag"].values,
                     r["answerCode"].values,
+                    r["userID"].values, # user
+
+                    r["month"].values,  # month
+                    r["day"].values,    # day
+                    r["hour"].values,   # hour
+                    r["minute"].values, # minute
+                    r["second"].values, # second
+
+                    #r["scaled_timestamp"].values, # scaled_timestamp
                 )
             )
         )
-        """
-        if is_train:    # userID 정보 저장
-            self.ui = group.groupby(['userID']).count().values
-            for i in range(1, len(self.ui)):
-                if i in set(test_df['userID']): # test data 인덱스 조정
-                    self.ui[i] -= 1
-                self.ui[i] += self.ui[i-1]  # 인덱스 누적값으로 변환
-        """
+        print(len(group.values))
 
         return group.values
 
@@ -219,18 +227,18 @@ class DKTDataset(torch.utils.data.Dataset):
         # 각 data의 sequence length
         seq_len = len(row[0])
 
-        test, question, tag, correct = row[0], row[1], row[2], row[3]
+        test, question, tag, correct, user, month, day, hour, minute, second = row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9]   # stime / row[10]
 
-        cate_cols = [test, question, tag, correct]
+        cate_cols = [test, question, tag, correct, user, month, day, hour, minute, second]  # stime
 
         # max seq len을 고려하여서 이보다 길면 자르고 아닐 경우 그대로 냅둔다
         if seq_len > self.args.max_seq_len:
             for i, col in enumerate(cate_cols):
-                cate_cols[i] = col[-self.args.max_seq_len :]    # p
+                cate_cols[i] = col[-self.args.max_seq_len :]
             mask = np.ones(self.args.max_seq_len, dtype=np.int16)
         else:
             mask = np.zeros(self.args.max_seq_len, dtype=np.int16)
-            mask[-seq_len:] = 1 # p
+            mask[-seq_len:] = 1
 
         # mask도 columns 목록에 포함시킴
         cate_cols.append(mask)
@@ -257,7 +265,7 @@ def collate(batch):
     for row in batch:
         for i, col in enumerate(row):
             pre_padded = torch.zeros(max_seq_len)
-            pre_padded[-len(col) :] = col   # 요건 left padding
+            pre_padded[-len(col) :] = col
             col_list[i].append(pre_padded)
 
     for i, _ in enumerate(col_list):

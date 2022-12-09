@@ -28,7 +28,6 @@ def run(args, train_data, valid_data, model):
 
     best_auc = -1
     early_stopping_counter = 0
-    print(f"Train Data: {len(train_loader.dataset)}, Valid Data: {len(valid_loader.dataset)}")
     for epoch in range(args.n_epochs):
 
         print(f"Start Training: Epoch {epoch + 1}")
@@ -50,20 +49,22 @@ def run(args, train_data, valid_data, model):
                 "train_acc_epoch": train_acc,
                 "valid_auc_epoch": auc,
                 "valid_acc_epoch": acc,
+                "best_auc": max(best_auc, auc), # wandb로 best_auc 트래킹
             }
         )
         if auc > best_auc:
             best_auc = auc
             # torch.nn.DataParallel로 감싸진 경우 원래의 model을 가져옵니다.
             model_to_save = model.module if hasattr(model, "module") else model
-            save_checkpoint(
-                {
-                    "epoch": epoch + 1,
-                    "state_dict": model_to_save.state_dict(),
-                },
-                args.model_dir,
-                f"{args.model}_{best_auc:.4f}_model_{time.localtime()[1]}{time.localtime()[2]}{time.localtime()[3]}{time.localtime()[4]}.pt",
-            )
+            if best_auc > 0.8:
+                save_checkpoint(
+                    {
+                        "epoch": epoch + 1,
+                        "state_dict": model_to_save.state_dict(),
+                    },
+                    args.model_dir,
+                    f"{args.model}_{best_auc:.4f}_model_{time.localtime()[1]:0>2}{time.localtime()[2]:0>2}{time.localtime()[3]:0>2}{time.localtime()[4]:0>2}.pt",
+                )
             early_stopping_counter = 0
         else:
             early_stopping_counter += 1
@@ -89,20 +90,7 @@ def train(train_loader, model, optimizer, scheduler, args):
         preds = model(input)
         targets = input[3]  # correct
 
-        """
-        slen = []   # 각 시퀀스 길이
-        for i in range(len(input[0])):
-            tmp = True
-            for j in range(len(input[0][i])):
-                if input[4][i][j] == 0: # mask 활용해서 마지막 유닛 인덱스 찾기
-                    slen.append(j)
-                    tmp = False
-                    break
-            if tmp: # mask에 0이 없는 경우 => 마지막 index
-                slen.append((len(input[0][i])-1))
-        """
-
-        loss = compute_loss(preds, targets) # , slen
+        loss = compute_loss(preds, targets)
         update_params(loss, model, optimizer, scheduler, args)
 
         if step % args.log_steps == 0:
@@ -199,7 +187,7 @@ def get_model(args):
 # 배치 전처리
 def process_batch(batch):
 
-    test, question, tag, correct, mask = batch
+    test, question, tag, correct, user, month, day, hour, minute, second, mask = batch  # stime
 
     # change to float
     mask = mask.float()
@@ -207,8 +195,8 @@ def process_batch(batch):
 
     # interaction을 임시적으로 correct를 한칸 우측으로 이동한 것으로 사용
     interaction = correct + 1  # 패딩을 위해 correct값에 1을 더해준다.
-    interaction = interaction.roll(shifts=1, dims=1)   # 수정
-    interaction_mask = mask.roll(shifts=1, dims=1) # 필요한가?
+    interaction = interaction.roll(shifts=1, dims=1)
+    interaction_mask = mask.roll(shifts=1, dims=1)
     interaction_mask[:, 0] = 0
     interaction = (interaction * interaction_mask).to(torch.int64)
 
@@ -216,12 +204,22 @@ def process_batch(batch):
     test = ((test + 1) * mask).int()
     question = ((question + 1) * mask).int()
     tag = ((tag + 1) * mask).int()
+    
+    user = ((user + 1) * mask).int()    # user
 
-    return (test, question, tag, correct, mask, interaction)
+    month = ((month) * mask).int()  # month (이미 >0 임)
+    day = ((day) * mask).int()      # day (이미 >0 임)
+    hour = ((hour + 1) * mask).int()    # hour
+    minute = ((minute + 1) * mask).int()    # minute
+    second = ((second + 1) * mask).int()    # second
+
+    #stime = ((stime + 1) * mask)    # stime
+
+    return (test, question, tag, correct, user, month, day, hour, minute, second, mask, interaction)    # stime
 
 
 # loss계산하고 parameter update!
-def compute_loss(preds, targets): # , slen
+def compute_loss(preds, targets):
     """
     Args :
         preds   : (batch_size, max_seq_len)
@@ -229,16 +227,11 @@ def compute_loss(preds, targets): # , slen
 
     """
     loss = get_criterion(preds, targets)
-
-    """right padding으로 바꾸면서 마지막 유닛을 구하는 알고리즘이 필요함
-    loss = []
-    for i in range(len(_loss)):
-        loss.append(_loss[i][slen[i]])
-    loss = torch.stack(loss, 0)
-    """
     
     # 각 시퀀스별 마지막 유닛에 대한 값만 loss 계산
     loss = loss[:, -1] 
+    # 그냥 전체 loss를 사용하면 비어있는 유닛(padding)이 영향을 끼치는 듯? => 그러면 마지막 k개 사용해보자!
+    #loss = loss[:, -2:] 
     loss = torch.mean(loss)
     return loss
 
@@ -246,9 +239,9 @@ def compute_loss(preds, targets): # , slen
 def update_params(loss, model, optimizer, scheduler, args):
     loss.backward()
     torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip_grad)
+    optimizer.step()    # step 순서 변경
     if args.scheduler == "linear_warmup":
         scheduler.step()
-    optimizer.step()
     optimizer.zero_grad()
 
 

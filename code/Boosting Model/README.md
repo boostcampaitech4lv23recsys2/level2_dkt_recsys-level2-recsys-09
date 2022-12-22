@@ -28,7 +28,7 @@
 - 따라서, CV(Cross-Validation)에 적용
 
 ## CV(Cross-Validation) - User Split
-- Future Data Leakage Issue
+- Future Data Leakage Issue - 문제 풀이 Domain의 특성상 큰 영향은 없을 것이라 판단
 - 10 Fold, 5 Fold 진행 
 - 결과 : 10Fold > 5Fold
 

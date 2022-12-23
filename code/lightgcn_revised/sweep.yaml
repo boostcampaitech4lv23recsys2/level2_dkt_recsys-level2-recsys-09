@@ -1,0 +1,14 @@
+program : train.py
+entity : sobing
+method : bayes
+project : gcn_val2 
+metric:
+  name: auc
+  goal : minimize
+parameters:
+  embedding_dim : 
+    values : [64, 128,256, 512]
+  learning_rate: 
+    values : [0.01, 0.005, 0.0001, 0.0005, 0.00001]
+  num_layers : 
+    values : [2,3,4,5,6]
